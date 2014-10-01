@@ -9,8 +9,6 @@ import qualified Data.Text as T
 
 import Control.Monad (when,liftM)
 
-import Control.Monad.Trans.Except (ExceptT(..),throwE,runExcept)
-
 import Data.Monoid ((<>))
 
 type Sym = Text
@@ -48,15 +46,15 @@ extend s t (Env r) = Env ((s,t) : r)
 -- so we can have some error handling funnies.
 type ErrorMsg = Text
 
-type TC m a = ExceptT ErrorMsg m a
+type TC a = Either ErrorMsg a
 
-findVar :: Monad m => Env -> Sym -> TC m Type
+findVar :: Env -> Sym -> TC Type
 findVar (Env r) s =
 	case lookup s r of
-		Just t -> return t
-		Nothing -> throwE $ "Cannot find variable " <> s
+		Just t -> Right t
+		Nothing -> Left $ "Cannot find variable " <> s
 		
-tCheck :: Monad m => Env -> Expr -> TC m Type
+tCheck :: Env -> Expr -> TC Type
 tCheck r (Var s) =
 	findVar r s
 tCheck r (App f a) = do
@@ -64,9 +62,9 @@ tCheck r (App f a) = do
 	case tf of
 		Pi x at rt -> do
 			ta <- tCheck r a
-			when (not (betaEq ta at)) $ throwE "Bad function argument type"
-			return $ subst x a rt
-		_ -> throwE "Non-function in application"
+			when (not (betaEq ta at)) $ Left "Bad function argument type"
+			Right $ subst x a rt
+		_ -> Left "Non-function in application"
 tCheck r (Lam s t e) = do
 	tCheck r t
 	let r' = extend s t r
@@ -78,21 +76,18 @@ tCheck r (Pi x a b) = do
 	s <- tCheckRed r a
 	let r' = extend x a r
 	t <- tCheckRed r' b
-	when ((s,t) `notElem` allowedKinds) $ throwE "Bad abstraction"
-	return t
-tCheck _ (Kind Star) = return $ Kind Box
-tCheck _ (Kind Box) = throwE "Found a box"
+	when ((s,t) `notElem` allowedKinds) $ Left "Bad abstraction"
+	Right t
+tCheck _ (Kind Star) = Right $ Kind Box
+tCheck _ (Kind Box) = Left "Found a box"
 
-tCheckRed :: Monad m => Env -> Expr -> TC m Type
+tCheckRed :: Env -> Expr -> TC Type
 tCheckRed r e = liftM whnf (tCheck r e)
 
-typeCheck :: Expr -> Type
-typeCheck e =
-	case runExcept $ tCheck initialEnv e of
-		Left msg -> error $ T.unpack ("Type error:\n" <> msg)
-		Right t -> t
+typeCheckExpr :: Expr -> TC Type
+typeCheckExpr = tCheck initialEnv
 
-typeCheckWithEnv :: Monad m => Env -> Expr -> TC m Type
+typeCheckWithEnv :: Env -> Expr -> TC Type
 typeCheckWithEnv ev ex = tCheck ev ex
 
 allowedKinds :: [(Type, Type)]
