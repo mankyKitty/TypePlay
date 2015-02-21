@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module TypePlay.Untyped where
+module TypePlay.Check.Untyped where
 
 import Prelude hiding (map,foldl,elem)
 import Data.List (map,foldl,(\\),union,elem)

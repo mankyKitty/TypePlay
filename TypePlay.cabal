@@ -50,8 +50,10 @@ cabal-version:       >=1.10
 
 library
   -- Modules exported by the library.
-  exposed-modules:     TypePlay.PolyMorph
-                                      , TypePlay.Untyped
+  exposed-modules:       TypePlay.Check.PolyMorph
+                       , TypePlay.Check.Untyped
+                       , TypePlay.Types
+                       , TypePlay.Infer.HM
   
   -- Modules included in this library but not exported.
   -- other-modules:       
@@ -61,8 +63,12 @@ library
   
   -- Other library packages from which modules are imported.
   build-depends:       base >=4.7 && <4.8
-                                  , text >= 1.2
-                                  , transformers >= 0.4
+                     , text >= 1.2
+                     , profunctor
+                     , lens
+                     , mtl
+                     , either
+                     , trifecta
 
   -- Directories containing source files.
   hs-source-dirs:      src
